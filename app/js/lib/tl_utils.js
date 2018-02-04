@@ -94,7 +94,7 @@ TLSerialization.prototype.storeLongP = function (iHigh, iLow, field) {
 }
 
 TLSerialization.prototype.storeLong = function (sLong, field) {
-  if (angular.isArray(sLong)) {
+  if (Array.isArray(sLong)) {
     if (sLong.length == 2) {
       return this.storeLongP(sLong[0], sLong[1], field)
     } else {

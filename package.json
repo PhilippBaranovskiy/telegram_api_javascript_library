@@ -19,28 +19,21 @@
     "show": true
   },
   "scripts": {
-    "start": "gulp watch",
-    "test": "gulp test"
+    "start": "gulp watch"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/zhukov/webogram.git"
+    "url": "https://github.com/rockfield/telegram_api_javascript_library.git"
   },
   "author": "zhukov",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/zhukov/webogram/issues"
+    "url": "https://github.com/rockfield/telegram_api_javascript_library/issues"
   },
   "locales": [
-    "en-us",
-    "es-es",
-    "de-de",
-    "it-it",
-    "ru-ru",
-    "nl-nl",
-    "pt-br"
+    "en-us"
   ],
-  "homepage": "http://zhukov.github.io/webogram",
+  "homepage": "https://github.com/rockfield/telegram_api_javascript_library",
   "devDependencies": {
     "del": "^1.2.0",
     "event-stream": "^3.1.0",
@@ -74,12 +67,5 @@
     "run-sequence": "^1.0.2",
     "st": "^0.5.2",
     "sw-precache": "^3.2.0"
-  },
-  "standard": {
-    "globals": [
-      "angular",
-      "$",
-      "chrome"
-    ]
   }
 }

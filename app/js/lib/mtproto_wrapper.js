@@ -109,7 +109,7 @@
 			var akk = 'dc' + dcID + '_auth_key'
 			var ssk = 'dc' + dcID + '_server_salt'
 
-			return Storage.get(akk, ssk).then(function (result) {
+			return Storage().get(akk, ssk).then(function (result) {
 				if (cache[dcID] !== undefined) {
 					return cache[dcID]
 				}
@@ -131,7 +131,7 @@
 					return $q.reject({type: 'AUTH_KEY_EMPTY', code: 401})
 				}
 
-				return MtpAuthorizer.auth(dcID).then(function (auth) {
+				return MtpAuthorizer().auth(dcID).then(function (auth) {
 					var storeObj = {}
 					storeObj[akk] = bytesToHex(auth.authKey)
 					storeObj[ssk] = bytesToHex(auth.serverSalt)
@@ -148,26 +148,27 @@
 		function mtpInvokeApi (method, params, options) {
 			options = options || {}
 
-			// var deferred = $q.defer()
+			let res, rej, promise = new Promise((_res, _rej) => {
+				res = _res;
+				rej = _rej;
+			});
 
 			var rejectPromise = function (error) {
 					if (!error) {
 						error = {type: 'ERROR_EMPTY'}
-					} else if (!angular.isObject(error)) {
+					// } else if (!angular.isObject(error)) {
+					} else {
 						error = {message: error}
 					}
-					deferred.reject(error)
-					if (options.ignoreErrors) {
-						return
-					}
-
-					if (error.code == 406) {
-						error.handled = true
-					}
+					
+					rej(error);
+					
+					if (options.ignoreErrors) { return; }
+					if (error.code == 406) { error.handled = true; }
 
 					if (!options.noErrorBox) {
 						error.input = method
-						error.stack = stack || (error.originalError && error.originalError.stack) || error.stack || (new Error()).stack
+						error.stack = stack || (error.originalError && error.originalError.stack) || error.stack || (new Error()).stack;
 						setTimeout(function () {
 							if (!error.handled) {
 								if (error.code == 401) {
@@ -175,14 +176,17 @@
 										if (location.protocol == 'http:' &&
 											!Config.Modes.http &&
 											Config.App.domains.indexOf(location.hostname) != -1) {
-											location.href = location.href.replace(/^http:/, 'https:')
+											// location.href = location.href.replace(/^http:/, 'https:')
+											console.log(' SMTH strange goes HERE ');
 										} else {
-											location.hash = '/login'
-											AppRuntimeManager.reload()
+											// location.hash = '/login';
+											// AppRuntimeManager.reload()
+											console.log('we came to:', '/login');
 										}
 									})
 								} else {
-									ErrorService.show({error: error})
+									// ErrorService.show({error: error})
+									console.error( error );
 								}
 								error.handled = true
 							}
@@ -192,43 +196,45 @@
 				dcID,
 				networkerPromise;
 
-			// var cachedNetworker
-			// var stack = (new Error()).stack || 'empty stack'
+			var cachedNetworker
+			var stack = (new Error()).stack || 'empty stack'
 			var performRequest = function (networker) {
 				return (cachedNetworker = networker).wrapApiCall(method, params, options).then(
 					function (result) {
-						deferred.resolve(result)
+						res(result);
 					},
 					function (error) {
-						console.error(dT(), 'Error', error.code, error.type, baseDcID, dcID)
+						console.error(dT(), 'Error', error.code, error.type, baseDcID, dcID);
 						if (error.code == 401 && baseDcID == dcID) {
-							Storage.remove('dc', 'user_auth')
-							telegramMeNotify(false)
-							rejectPromise(error)
+							Storage().remove('dc', 'user_auth');
+							// telegramMeNotify(false)
+							rejectPromise(error);
 						}
 						else if (error.code == 401 && baseDcID && dcID != baseDcID) {
 							if (cachedExportPromise[dcID] === undefined) {
-								var exportDeferred = $q.defer()
+								
+								var exportDeferred = new Promise((exp_res, exp_rej) => {
 
-								mtpInvokeApi('auth.exportAuthorization', {dc_id: dcID}, {noErrorBox: true}).then(function (exportedAuth) {
-									mtpInvokeApi('auth.importAuthorization', {
-										id: exportedAuth.id,
-										bytes: exportedAuth.bytes
-									}, {dcID: dcID, noErrorBox: true}).then(function () {
-										exportDeferred.resolve()
+									mtpInvokeApi('auth.exportAuthorization', {dc_id: dcID}, {noErrorBox: true}).then(function (exportedAuth) {
+										mtpInvokeApi('auth.importAuthorization', {
+											id: exportedAuth.id,
+											bytes: exportedAuth.bytes
+										}, {dcID: dcID, noErrorBox: true}).then(function () {
+											exp_res();
+										}, function (e) {
+											exp_rej(e);
+										})
 									}, function (e) {
-										exportDeferred.reject(e)
+										exp_rej(e);
 									})
-								}, function (e) {
-									exportDeferred.reject(e)
-								})
+								});
 
-								cachedExportPromise[dcID] = exportDeferred.promise
+								cachedExportPromise[dcID] = exportDeferred;
 							}
 
 							cachedExportPromise[dcID].then(function () {
 								(cachedNetworker = networker).wrapApiCall(method, params, options).then(function (result) {
-									deferred.resolve(result)
+									res(result);
 								}, rejectPromise)
 							}, rejectPromise)
 						}
@@ -238,12 +244,12 @@
 								if (options.dcID) {
 									options.dcID = newDcID
 								} else {
-									Storage.set({dc: baseDcID = newDcID})
+									Storage().set({dc: baseDcID = newDcID})
 								}
 
 								mtpGetNetworker(newDcID, options).then(function (networker) {
 									networker.wrapApiCall(method, params, options).then(function (result) {
-										deferred.resolve(result)
+										res(result);
 									}, rejectPromise)
 								}, rejectPromise)
 							}
@@ -270,21 +276,21 @@
 							setTimeout(function () {
 								performRequest(cachedNetworker)
 							}, options.waitTime * 1000)
-						}else {
+						} else {
 							rejectPromise(error)
 						}
 					})
 			}
 
 			if (dcID = (options.dcID || baseDcID)) {
-				mtpGetNetworker(dcID, options).then(performRequest, rejectPromise)
+				mtpGetNetworker(dcID, options).then(performRequest, rejectPromise);
 			} else {
 				Storage.get('dc').then(function (baseDcID) {
-					mtpGetNetworker(dcID = baseDcID || 2, options).then(performRequest, rejectPromise)
+					mtpGetNetworker(dcID = baseDcID || 2, options).then(performRequest, rejectPromise);
 				})
 			}
 
-			return deferred.promise
+			return promise;
 		}
 
 		function mtpGetUserID () {
